@@ -52,6 +52,9 @@ PRESETS: dict[str, dict] = {
         "base_url": "https://openrouter.ai/api/v1",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
+        # GET /models returns 200 even for bogus keys, so add uses this POST
+        # endpoint (which actually exercises the key) for validation.
+        "validation_endpoint": "/chat/completions",
         "chat_model": "meta-llama/llama-3.1-8b-instruct:free",
     },
     "gemini": {

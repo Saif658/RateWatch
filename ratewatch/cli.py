@@ -67,7 +67,14 @@ def add(provider: str) -> None:
         cfg["extra_headers"] = extra_headers
 
     click.echo("validating with one test request...")
-    result = check.check_provider(provider, cfg, key)
+    # When a preset declares validation_endpoint, the cheap GET against
+    # test_endpoint is not enough (some providers return 200 for bogus
+    # keys), so we POST to validation_endpoint instead, mirroring the
+    # --live probe in shape.
+    if cfg.get("validation_endpoint"):
+        result = check.check_provider_live(provider, cfg, key)
+    else:
+        result = check.check_provider(provider, cfg, key)
     if result.status == check.STATUS_ERROR:
         click.echo(f"validation failed: {result.message}", err=True)
         sys.exit(2)

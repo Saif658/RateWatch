@@ -70,23 +70,32 @@ def get_provider(provider: str) -> dict | None:
 def add_key(
     provider: str,
     key: str,
+    cfg: dict,
     *,
-    base_url: str | None = None,
-    auth_header_format: str | None = None,
-    test_endpoint: str | None = None,
-    extra_headers: dict | None = None,
     overwrite: bool = False,
 ) -> str:
     """Save a provider + key to the config.
 
-    Returns a short status string ("added", "overwritten"). Raises ValueError
-    on bad input. Network validation is done by the caller (cli.py) before
-    this is invoked.
+    cfg must contain base_url, auth_header_format, and test_endpoint at
+    minimum. Every other field in cfg (chat_model, validation_endpoint,
+    extra_headers, anything new added later) is persisted verbatim.
+
+    Returns "added" or "overwritten". Raises ValueError on bad input.
+    Network validation is done by the caller (cli.py) before this is
+    invoked.
     """
     if not provider or not provider.strip():
         raise ValueError("provider name cannot be empty")
     if not key or not key.strip():
         raise ValueError("key cannot be empty")
+
+    base_url = cfg.get("base_url")
+    auth_header_format = cfg.get("auth_header_format")
+    test_endpoint = cfg.get("test_endpoint")
+    if not base_url or not auth_header_format or not test_endpoint:
+        raise ValueError(
+            "cfg must include base_url, auth_header_format, and test_endpoint"
+        )
 
     data = _read()
     providers = data.setdefault("providers", {})
@@ -94,19 +103,10 @@ def add_key(
     if provider in providers and not overwrite:
         raise ValueError(f"provider {provider!r} already configured")
 
-    if base_url is None or auth_header_format is None or test_endpoint is None:
-        raise ValueError(
-            "base_url, auth_header_format, and test_endpoint are required"
-        )
-
-    entry = {
-        "key": key,
-        "base_url": base_url,
-        "auth_header_format": auth_header_format,
-        "test_endpoint": test_endpoint,
-    }
-    if extra_headers:
-        entry["extra_headers"] = extra_headers
+    # Wholesale copy so future preset fields (chat_model, validation_endpoint,
+    # anything new) propagate to disk without code changes here.
+    entry = dict(cfg)
+    entry["key"] = key
 
     existed = provider in providers
     providers[provider] = entry

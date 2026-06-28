@@ -36,10 +36,6 @@ def add(provider: str) -> None:
 
     if preset is not None:
         click.echo(f"using preset for {provider}: {preset['base_url']}")
-        key = click.prompt(f"API key for {provider}", hide_input=True, confirmation_prompt=False)
-        if not key:
-            click.echo("empty key not allowed", err=True)
-            sys.exit(2)
         base_url = preset["base_url"]
         auth_header_format = preset["auth_header_format"]
         test_endpoint = preset["test_endpoint"]
@@ -51,18 +47,20 @@ def add(provider: str) -> None:
             'auth header format (e.g. "Authorization: Bearer {key}")'
         )
         test_endpoint = click.prompt('test endpoint (path, e.g. "/models")')
-        key = click.prompt(f"API key for {provider}", hide_input=True, confirmation_prompt=False)
-        if not key:
-            click.echo("empty key not allowed", err=True)
-            sys.exit(2)
         extra_headers = None
 
-    # Validate with one probe before persisting.
-    cfg = {
-        "base_url": base_url,
-        "auth_header_format": auth_header_format,
-        "test_endpoint": test_endpoint,
-    }
+    key = click.prompt(f"API key for {provider}", hide_input=True, confirmation_prompt=False)
+    if not key:
+        click.echo("empty key not allowed", err=True)
+        sys.exit(2)
+
+    # Start from the preset wholesale so chat_model / validation_endpoint /
+    # any future field flows through without us listing them explicitly.
+    # For custom providers, preset is None so cfg starts empty.
+    cfg = dict(preset) if preset is not None else {}
+    cfg["base_url"] = base_url
+    cfg["auth_header_format"] = auth_header_format
+    cfg["test_endpoint"] = test_endpoint
     if extra_headers:
         cfg["extra_headers"] = extra_headers
 
@@ -84,15 +82,7 @@ def add(provider: str) -> None:
             err=True,
         )
 
-    config.add_key(
-        provider,
-        key,
-        base_url=base_url,
-        auth_header_format=auth_header_format,
-        test_endpoint=test_endpoint,
-        extra_headers=extra_headers,
-        overwrite=True,
-    )
+    config.add_key(provider, key, cfg, overwrite=True)
     click.echo(f"saved {provider}.")
 
 

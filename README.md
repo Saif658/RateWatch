@@ -32,6 +32,9 @@ ratewatch add anthropic
 # probe a single provider
 ratewatch check groq
 
+# probe with a real request for accurate numbers (uses a tiny amount of quota)
+ratewatch check groq --live
+
 # probe everything configured
 ratewatch check
 ```

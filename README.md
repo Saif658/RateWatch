@@ -13,10 +13,14 @@ custom_x:   ℹ️  key valid, limit info unavailable
 ## Install
 
 ```bash
-pip install -e .
+pip install ratewatch
 ```
 
-Requires Python 3.10+.
+Requires Python 3.10+. To install from a local checkout instead:
+
+```bash
+pip install -e .
+```
 
 ## Usage
 
@@ -57,6 +61,13 @@ A preset is just a base URL, an auth header format, and a cheap probe
 endpoint (usually `/models`). When a preset's URL or header drifts, the
 probe still runs — it just falls through to "key valid, limit info
 unavailable" instead of crashing.
+
+Not every provider exposes live rate-limit data on every endpoint. Some
+providers (e.g. NVIDIA NIM) don't expose remaining-quota info at all —
+you'll see "key valid, limit info unavailable" until you actually hit a
+429. Use `--live` mode for a more accurate read on providers that
+support it, but note this uses a small amount of real quota since it
+sends an actual request.
 
 ## Custom providers
 

@@ -114,10 +114,15 @@ def check_provider_live(name: str, config: dict, key: str, *, timeout: float = 1
     model = config["chat_model"]
     headers = _build_headers(config, key)
 
+    # The Gemini preset stores "/v1beta/models/{model}:generateContent"; the
+    # default would be fine on its own but the preset always provides a value,
+    # so we have to substitute {model} explicitly. Simple .replace() mirrors
+    # how _build_headers handles the {key} placeholder elsewhere.
     if fmt == "gemini":
-        url = config["base_url"].rstrip("/") + config.get(
-            "chat_endpoint", f"/v1beta/models/{model}:generateContent"
-        )
+        url = config["base_url"].rstrip("/") + (
+            config.get("chat_endpoint")
+            or f"/v1beta/models/{model}:generateContent"
+        ).replace("{model}", model)
         payload = {
             "contents": [{"parts": [{"text": "hi"}]}],
             "generationConfig": {"maxOutputTokens": 1},

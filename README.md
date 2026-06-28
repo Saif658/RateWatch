@@ -25,6 +25,9 @@ pip install -e .
 ## Usage
 
 ```bash
+# list all built-in provider presets and whether each is configured
+ratewatch providers
+
 # add a provider (prompted for key only when a preset is known)
 ratewatch add openai
 ratewatch add anthropic

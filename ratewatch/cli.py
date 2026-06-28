@@ -26,7 +26,10 @@ def main() -> None:
 @main.command()
 @click.argument("provider")
 def add(provider: str) -> None:
-    """Add a provider key (configures a built-in preset or prompts for custom)."""
+    """Add a provider key (configures a built-in preset or prompts for custom).
+
+    Run `ratewatch providers` to see all built-in providers and their exact names.
+    """
     if config.has_provider(provider):
         if not click.confirm(f"{provider!r} is already configured, overwrite?", default=False):
             click.echo("aborted.", err=True)
@@ -118,6 +121,33 @@ def list_cmd() -> None:
     width = max(len(name) for name in rows)
     for name in sorted(rows):
         click.echo(f"{name.ljust(width)}  {rows[name]}")
+
+
+# ---------------------------------------------------------------------------
+# providers
+# ---------------------------------------------------------------------------
+
+@main.command("providers")
+def providers_cmd() -> None:
+    """List all built-in provider presets and whether each is configured."""
+    configured = set(config.list_keys())
+    preset_names = providers.list_preset_names()
+
+    if not preset_names:
+        click.echo("no built-in providers.")
+        return
+
+    width = max(len(p) for p in preset_names)
+    for name in preset_names:
+        status = "configured" if name in configured else "not added"
+        click.echo(f"{name.ljust(width)}  {status}")
+
+    click.echo("")
+    click.echo(
+        "Run `ratewatch add <provider>` to configure one. "
+        "Providers not listed here can still be added manually — "
+        "ratewatch will prompt for base URL, auth header, and test endpoint."
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -295,3 +295,31 @@ def _humanize_duration(seconds: int | None) -> str:
         return f"{int(round(hours))}h"
     days = hours / 24.0
     return f"{int(round(days))}d"
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+_STATUS_ICONS: dict[str, tuple[str, str]] = {
+    STATUS_OK: ("✅", "green"),
+    STATUS_WARN: ("⚠️", "yellow"),
+    STATUS_LIMITED: ("❌", "red"),
+    STATUS_UNKNOWN: ("ℹ️", "dim"),
+    STATUS_ERROR: ("🔴", "red"),
+}
+
+
+def print_results(results: list[CheckResult]) -> None:
+    """Render a list of CheckResults as colored, aligned lines."""
+    if not results:
+        return
+    width = max(len(r.provider) for r in results)
+    console = Console()
+    for r in results:
+        icon, style = _STATUS_ICONS.get(r.status, ("?", ""))
+        line = Text()
+        line.append(f"{r.provider}:".ljust(width + 1), style="bold")
+        line.append(f"{icon} ", style=style)
+        line.append(r.message or "(no detail)", style=style)
+        console.print(line)

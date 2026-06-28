@@ -145,7 +145,16 @@ def reset() -> None:
 
 @main.command()
 @click.argument("provider", required=False)
-def check_cmd(provider: str | None) -> None:
+@click.option(
+    "--live",
+    is_flag=True,
+    help=(
+        "Send a real chat-completion request to each provider instead of the "
+        "cheap /models probe. Useful when the lightweight endpoint doesn't "
+        "expose rate-limit headers."
+    ),
+)
+def check_cmd(provider: str | None, live: bool) -> None:
     """Check rate-limit status. Defaults to all configured providers."""
     if provider is not None:
         cfg = config.get_provider(provider)
@@ -162,7 +171,17 @@ def check_cmd(provider: str | None) -> None:
         entries = [(name, cfg, cfg["key"]) for name, cfg in entries]
 
     from . import check as check_mod
-    results = check_mod.check_all(entries)
+    if live:
+        click.echo(
+            "live mode sends a real request to each provider "
+            "and may use a small amount of your quota.",
+            err=True,
+        )
+        probe_fn = check_mod.check_provider_live
+    else:
+        probe_fn = check_mod.check_provider
+
+    results = [probe_fn(name, cfg, key) for name, cfg, key in entries]
     check_mod.print_results(results)
 
     if any(r.is_limited for r in results):

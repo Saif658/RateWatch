@@ -75,11 +75,11 @@ class CheckResult:
 
 
 # ---------------------------------------------------------------------------
-# One probe
+# Probes
 # ---------------------------------------------------------------------------
 
 def check_provider(name: str, config: dict, key: str, *, timeout: float = 10.0) -> CheckResult:
-    """Send a single probe and classify the response."""
+    """Cheap GET probe: hit the configured test_endpoint and parse headers."""
     url = _join_url(config["base_url"], config.get("test_endpoint", "/"))
     headers = _build_headers(config, key)
 
@@ -92,6 +92,59 @@ def check_provider(name: str, config: dict, key: str, *, timeout: float = 10.0) 
             message=f"network error: {e.__class__.__name__}",
         )
 
+    return _analyze_response(name, resp)
+
+
+def check_provider_live(name: str, config: dict, key: str, *, timeout: float = 15.0) -> CheckResult:
+    """Real chat-completion probe (--live mode).
+
+    Sends a minimal payload to whatever shape the provider supports
+    (OpenAI-compatible /chat/completions by default, Anthropic /v1/messages,
+    or Gemini :generateContent). The response headers carry the rate-limit
+    metadata we actually want.
+    """
+    if not config.get("chat_model"):
+        return CheckResult(
+            provider=name,
+            status=STATUS_ERROR,
+            message="no chat_model configured; --live not available for this provider",
+        )
+
+    fmt = config.get("chat_format", "openai")
+    model = config["chat_model"]
+    headers = _build_headers(config, key)
+
+    if fmt == "gemini":
+        url = config["base_url"].rstrip("/") + config.get(
+            "chat_endpoint", f"/v1beta/models/{model}:generateContent"
+        )
+        payload = {
+            "contents": [{"parts": [{"text": "hi"}]}],
+            "generationConfig": {"maxOutputTokens": 1},
+        }
+    else:
+        # "openai" and "anthropic" both use the same messages-array body shape.
+        url = config["base_url"].rstrip("/") + config.get("chat_endpoint", "/chat/completions")
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    except requests.RequestException as e:
+        return CheckResult(
+            provider=name,
+            status=STATUS_ERROR,
+            message=f"network error: {e.__class__.__name__}",
+        )
+
+    return _analyze_response(name, resp)
+
+
+def _analyze_response(name: str, resp: requests.Response) -> CheckResult:
+    """Classify a response (any HTTP) into a CheckResult."""
     raw = {k.lower(): v for k, v in resp.headers.items()}
 
     if resp.status_code == 429:

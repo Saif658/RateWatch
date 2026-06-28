@@ -55,7 +55,10 @@ PRESETS: dict[str, dict] = {
         # GET /models returns 200 even for bogus keys, so add uses this POST
         # endpoint (which actually exercises the key) for validation.
         "validation_endpoint": "/chat/completions",
-        "chat_model": "meta-llama/llama-3.1-8b-instruct:free",
+        # Free-tier model availability on OpenRouter changes frequently, so
+        # we use their official Free Models Router ("openrouter/free") rather
+        # than a fixed model slug that can go stale.
+        "chat_model": "openrouter/free",
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com",

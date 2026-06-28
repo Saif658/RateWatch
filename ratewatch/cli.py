@@ -24,12 +24,28 @@ def main() -> None:
 # ---------------------------------------------------------------------------
 
 @main.command()
-@click.argument("provider")
-def add(provider: str) -> None:
+@click.argument("provider", required=False)
+def add(provider: str | None) -> None:
     """Add a provider key (configures a built-in preset or prompts for custom).
 
-    Run `ratewatch providers` to see all built-in providers and their exact names.
+    Available built-in providers:
     """
+    if provider is None:
+        preset_names = providers.list_preset_names()
+        if not preset_names:
+            click.echo("no built-in providers.")
+            return
+        
+        click.echo("Available providers:")
+        width = max(len(p) for p in preset_names)
+        for name in preset_names:
+            click.echo(f"  {name.ljust(width)}")
+        
+        click.echo("")
+        click.echo("Usage: ratewatch add <provider>")
+        click.echo("Providers not listed here can still be added manually — ratewatch will prompt for base URL, auth header, and test endpoint.")
+        return
+    
     if config.has_provider(provider):
         if not click.confirm(f"{provider!r} is already configured, overwrite?", default=False):
             click.echo("aborted.", err=True)

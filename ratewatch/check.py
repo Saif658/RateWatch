@@ -1,8 +1,9 @@
 """Rate-limit probe loop.
 
 One generic check_provider(provider_config, key) does all the actual work:
-build URL, send request, scan headers, classify status. check_all wraps it
-to produce colored output for every configured provider.
+build URL, send request, scan headers, classify status. check_provider_live
+adds a real chat-completion probe (--live mode). print_results renders a list
+of CheckResults for the CLI.
 """
 
 from __future__ import annotations
@@ -10,7 +11,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Iterable
 
 import requests
 from rich.console import Console
@@ -239,21 +239,6 @@ def _format_summary(remaining: int | None, limit: int | None, reset_sec: int | N
     elif not head:
         tail = "key valid, limit info unavailable"
     return head + tail
-
-
-# ---------------------------------------------------------------------------
-# All providers
-# ---------------------------------------------------------------------------
-
-def check_all(entries: Iterable[tuple[str, dict, str]]) -> list[CheckResult]:
-    """Probe every configured provider.
-
-    entries is an iterable of (name, config, key) tuples.
-    """
-    results = []
-    for name, cfg, key in entries:
-        results.append(check_provider(name, cfg, key))
-    return results
 
 
 # ---------------------------------------------------------------------------

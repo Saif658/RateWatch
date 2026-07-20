@@ -1,0 +1,7 @@
+click>=8.1
+requests>=2.31
+rich>=13.7
+platformdirs>=4.2
+tomli-w>=1.0
+pytest>=8
+responses>=0.25

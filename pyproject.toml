@@ -21,11 +21,5 @@ dependencies = [
 [project.scripts]
 ratewatch = "ratewatch.cli:main"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8",
-    "responses>=0.25",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["ratewatch"]

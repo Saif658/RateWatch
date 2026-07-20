@@ -22,6 +22,15 @@ Requires Python 3.10+. To install from a local checkout instead:
 pip install -e .
 ```
 
+## Contributing / running tests
+
+Run the test suite straight from a checkout — no install needed:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ## Usage
 
 ```bash

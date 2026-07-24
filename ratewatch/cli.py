@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 import click
 
@@ -197,7 +199,16 @@ def reset() -> None:
         "expose rate-limit headers."
     ),
 )
-def check_cmd(provider: str | None, live: bool) -> None:
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help=(
+        "Print results as a JSON array (one object per provider) instead of "
+        "the rich text table. Useful for scripting. Exit codes are unchanged."
+    ),
+)
+def check_cmd(provider: str | None, live: bool, as_json: bool) -> None:
     """Check rate-limit status. Defaults to all configured providers."""
     if provider is not None:
         cfg = config.get_provider(provider)
@@ -213,19 +224,38 @@ def check_cmd(provider: str | None, live: bool) -> None:
         entries = sorted(all_cfg.items(), key=lambda kv: kv[0])
         entries = [(name, cfg, cfg["key"]) for name, cfg in entries]
 
-    from . import check as check_mod
     if live:
         click.echo(
             "live mode sends a real request to each provider "
             "and may use a small amount of your quota.",
             err=True,
         )
-        probe_fn = check_mod.check_provider_live
+        probe_fn = check.check_provider_live
     else:
-        probe_fn = check_mod.check_provider
+        probe_fn = check.check_provider
 
-    results = [probe_fn(name, cfg, key) for name, cfg, key in entries]
-    check_mod.print_results(results)
+    # Each probe is a blocking HTTP call, so run them concurrently in
+    # threads to parallelize the I/O. executor.map() returns results in
+    # input order, so the output stays sorted by provider name regardless
+    # of completion order.
+    with ThreadPoolExecutor(max_workers=len(entries)) as executor:
+        results = list(executor.map(probe_fn, *zip(*entries)))
+
+    if as_json:
+        payload = [
+            {
+                "provider": r.provider,
+                "status": r.status,
+                "remaining": r.remaining,
+                "limit": r.limit,
+                "reset_seconds": r.reset_seconds,
+                "message": r.message,
+            }
+            for r in results
+        ]
+        click.echo(json.dumps(payload, indent=2))
+    else:
+        check.print_results(results)
 
     if any(r.is_limited for r in results):
         sys.exit(1)

@@ -49,13 +49,19 @@ ratewatch check groq --live
 
 # probe everything configured
 ratewatch check
+
+# emit a JSON array of results (one object per provider) for scripting
+ratewatch check --json
 ```
 
 `ratewatch check` exits with a non-zero status if any provider is rate-limited,
-so it's scriptable:
+so it's scriptable. Pass `--json` to emit a JSON array (one object per provider,
+with `provider`, `status`, `remaining`, `limit`, `reset_seconds`, and `message`
+fields) instead of the colored table — the exit codes are unchanged:
 
 ```bash
 ratewatch check && echo "every provider is healthy"
+ratewatch check --json | jq 'map(select(.status == "limited"))'
 ```
 
 Other commands:
@@ -127,6 +133,8 @@ reported valid and the limit is listed as unknown.
 - `0` — every checked provider is not rate-limited
 - `1` — at least one provider is rate-limited (or a non-rate-limit error)
 - `2` — misconfiguration (missing arg, empty key, validation failure, etc.)
+
+`--json` changes only the output format; the exit codes above are unchanged.
 
 ## License
 

@@ -12,11 +12,7 @@ custom_x:   ℹ️  key valid, limit info unavailable
 
 ## Install
 
-```bash
-pip install ratewatch
-```
-
-Requires Python 3.10+. To install from a local checkout instead:
+Requires Python 3.11+.
 
 ```bash
 pip install -e .

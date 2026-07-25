@@ -132,6 +132,3 @@ reported valid and the limit is listed as unknown.
 
 `--json` changes only the output format; the exit codes above are unchanged.
 
-## License
-
-MIT.

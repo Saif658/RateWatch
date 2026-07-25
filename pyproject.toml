@@ -7,7 +7,6 @@ name = "ratewatch"
 version = "0.1.1"
 description = "Check rate-limit status for LLM API providers before you hit a limit."
 readme = "README.md"
-license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [{ name = "ratewatch" }]
 dependencies = [

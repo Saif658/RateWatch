@@ -27,52 +27,94 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-## Usage
+## Commands
+
+### `ratewatch providers`
+
+List all built-in provider presets and whether each is configured.
 
 ```bash
-# list all built-in provider presets and whether each is configured
 ratewatch providers
+```
 
-# add a provider (prompted for key only when a preset is known)
+### `ratewatch add <provider>`
+
+Add a provider. When a preset is known, only the API key is prompted. Otherwise
+you'll be asked for the base URL, auth header format, and test endpoint too.
+
+```bash
+# interactive (prompted for key)
 ratewatch add openai
-ratewatch add anthropic
 
-# add a provider with a key non-interactively (flag, or RATEWATCH_KEY env var)
+# non-interactive via --key flag
 ratewatch add groq --key $GROQ_KEY
 
+# non-interactive via environment variable
+export RATEWATCH_KEY=sk-abc123
+ratewatch add anthropic
+```
+
+Precedence: `--key` flag > `RATEWATCH_KEY` env var > interactive prompt.
+
+### `ratewatch check [<provider>]`
+
+Check rate-limit status. Defaults to all configured providers. Exits non-zero
+if any provider is rate-limited.
+
+```bash
 # probe a single provider
 ratewatch check groq
-
-# probe with a real request for accurate numbers (uses a tiny amount of quota)
-ratewatch check groq --live
-
-# probe with a custom timeout (seconds; default 10 for cheap, 15 for --live)
-ratewatch check groq --timeout 5.0
 
 # probe everything configured
 ratewatch check
 
-# emit a JSON array of results (one object per provider) for scripting
+# live mode — sends a real chat request for accurate numbers
+ratewatch check groq --live
+
+# JSON output for scripting
 ratewatch check --json
+
+# custom timeout (seconds; default 10 for cheap, 15 for live)
+ratewatch check groq --timeout 5.0
+
+# quiet mode — suppresses non-essential stderr (e.g. live-mode warning)
+ratewatch check --live --quiet
+
+# combine flags
+ratewatch check --live --json --quiet
 ```
 
-`ratewatch check` exits with a non-zero status if any provider is rate-limited,
-so it's scriptable. Pass `--json` to emit a JSON array (one object per provider,
-with `provider`, `status`, `remaining`, `limit`, `reset_seconds`, and `message`
-fields) instead of the colored table — the exit codes are unchanged:
+### `ratewatch list`
+
+Show configured providers with masked keys.
 
 ```bash
-ratewatch check && echo "every provider is healthy"
-ratewatch check --json | jq 'map(select(.status == "limited"))'
+ratewatch list
 ```
 
-Other commands:
+### `ratewatch export`
+
+Print the full provider config as JSON with every key field masked. Safe for
+backup or scripting — pipe to a file.
 
 ```bash
-ratewatch list     # show providers with masked keys
-ratewatch export   # full config as JSON with masked keys (for backup/scripting)
-ratewatch remove <provider>
-ratewatch reset    # delete the entire config file
+ratewatch export > backup.json
+```
+
+### `ratewatch remove <provider>`
+
+Remove a configured provider.
+
+```bash
+ratewatch remove openai
+```
+
+### `ratewatch reset`
+
+Delete the entire config file.
+
+```bash
+ratewatch reset
 ```
 
 ## Supported out of the box

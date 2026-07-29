@@ -219,3 +219,188 @@ class TestConcurrentCheck:
         result = CliRunner().invoke(cli.main, ["check", "--live"])
         assert result.exit_code == 0
         assert live_calls == ["groq"]
+
+
+# ===========================================================================
+# add --key and RATEWATCH_KEY env var
+# ===========================================================================
+
+class TestAddKeyOption:
+    def test_flag_provided(self, isolated_config_dir, monkeypatch):
+        monkeypatch.setattr(
+            check,
+            "check_provider",
+            lambda name, cfg, key, **kw: check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            ),
+        )
+        result = CliRunner().invoke(
+            cli.main, ["add", "groq", "--key", "sk-groq-abc123"]
+        )
+        assert result.exit_code == 0
+        assert "saved groq." in result.output
+        # Verify the correct key was stored
+        stored = config.get_provider("groq")
+        assert stored is not None
+        assert stored["key"] == "sk-groq-abc123"
+
+    def test_env_var_fallback(self, isolated_config_dir, monkeypatch):
+        monkeypatch.setattr(
+            check,
+            "check_provider",
+            lambda name, cfg, key, **kw: check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            ),
+        )
+        monkeypatch.setenv("RATEWATCH_KEY", "sk-groq-from-env")
+        result = CliRunner().invoke(cli.main, ["add", "groq"])
+        assert result.exit_code == 0
+        assert "saved groq." in result.output
+        stored = config.get_provider("groq")
+        assert stored is not None
+        assert stored["key"] == "sk-groq-from-env"
+
+    def test_flag_overrides_env_var(self, isolated_config_dir, monkeypatch):
+        monkeypatch.setattr(
+            check,
+            "check_provider",
+            lambda name, cfg, key, **kw: check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            ),
+        )
+        monkeypatch.setenv("RATEWATCH_KEY", "sk-env-var")
+        result = CliRunner().invoke(
+            cli.main, ["add", "groq", "--key", "sk-flag-wins"]
+        )
+        assert result.exit_code == 0
+        assert "saved groq." in result.output
+        stored = config.get_provider("groq")
+        assert stored is not None
+        assert stored["key"] == "sk-flag-wins"
+
+    def test_empty_flag_errors(self, isolated_config_dir, monkeypatch):
+        result = CliRunner().invoke(
+            cli.main, ["add", "groq", "--key", ""]
+        )
+        assert result.exit_code == 2
+        assert "empty key" in result.output
+
+
+# ===========================================================================
+# check --timeout
+# ===========================================================================
+
+class TestCheckTimeout:
+    def test_timeout_passed_to_probe(self, isolated_config_dir, monkeypatch):
+        _add_provider("groq")
+        captured_kwargs = {}
+
+        def fake_probe(name, cfg, key, **kwargs):
+            captured_kwargs.update(kwargs)
+            return check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            )
+
+        monkeypatch.setattr(check, "check_provider", fake_probe)
+        result = CliRunner().invoke(cli.main, ["check", "--timeout", "7.5"])
+        assert result.exit_code == 0
+        assert captured_kwargs.get("timeout") == 7.5
+
+    def test_timeout_passed_to_live_probe(self, isolated_config_dir, monkeypatch):
+        _add_provider("groq")
+        captured_kwargs = {}
+
+        def fake_live(name, cfg, key, **kwargs):
+            captured_kwargs.update(kwargs)
+            return check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            )
+
+        monkeypatch.setattr(check, "check_provider_live", fake_live)
+        monkeypatch.setattr(
+            check,
+            "check_provider",
+            lambda *a, **k: pytest.fail("expected --live to use check_provider_live"),
+        )
+        result = CliRunner().invoke(cli.main, ["check", "--live", "--timeout", "7.5"])
+        assert result.exit_code == 0
+        assert captured_kwargs.get("timeout") == 7.5
+
+    def test_invalid_timeout_errors(self, isolated_config_dir):
+        _add_provider("groq")
+        result = CliRunner().invoke(cli.main, ["check", "--timeout", "0"])
+        assert result.exit_code == 2
+
+    def test_negative_timeout_errors(self, isolated_config_dir):
+        _add_provider("groq")
+        result = CliRunner().invoke(cli.main, ["check", "--timeout", "-1"])
+        assert result.exit_code == 2
+
+    def test_no_timeout_uses_default(self, isolated_config_dir, monkeypatch):
+        _add_provider("groq")
+        captured_kwargs = {}
+
+        def fake_probe(name, cfg, key, **kwargs):
+            captured_kwargs.update(kwargs)
+            return check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            )
+
+        monkeypatch.setattr(check, "check_provider", fake_probe)
+        result = CliRunner().invoke(cli.main, ["check"])
+        assert result.exit_code == 0
+        # timeout should not be forwarded when not specified
+        assert "timeout" not in captured_kwargs
+
+
+# ===========================================================================
+# check --quiet
+# ===========================================================================
+
+class TestCheckQuiet:
+    def test_quiet_suppresses_live_warning_on_stderr(
+        self, isolated_config_dir, monkeypatch
+    ):
+        _add_provider("groq")
+        monkeypatch.setattr(
+            check,
+            "check_provider_live",
+            lambda name, cfg, key, **kw: check.CheckResult(
+                provider=name, status=check.STATUS_OK, message="ok"
+            ),
+        )
+        result = CliRunner().invoke(cli.main, ["check", "--live", "--json", "--quiet"])
+        assert result.exit_code == 0
+        assert result.stderr == ""
+
+
+# ===========================================================================
+# export
+# ===========================================================================
+
+class TestExport:
+    def test_keys_are_masked_in_output(self, isolated_config_dir):
+        _add_provider("groq")
+        _add_provider("openai")
+        result = CliRunner().invoke(cli.main, ["export"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert set(data.keys()) == {"groq", "openai"}
+        for entry in data.values():
+            # key must be masked: starts with ● and ends with last 4 chars
+            assert entry["key"].startswith("●")
+            assert entry["key"].endswith("abcd")
+
+    def test_export_json_is_parseable(self, isolated_config_dir):
+        _add_provider("groq")
+        result = CliRunner().invoke(cli.main, ["export"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["groq"]["base_url"] == "https://api.example.com/v1"
+        assert data["groq"]["auth_header_format"] == "Authorization: Bearer {key}"
+        assert data["groq"]["test_endpoint"] == "/models"
+
+    def test_no_providers(self, isolated_config_dir):
+        result = CliRunner().invoke(cli.main, ["export"])
+        assert result.exit_code == 0
+        assert result.output.strip() == "no providers configured."

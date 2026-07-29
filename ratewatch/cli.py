@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import click
 
@@ -27,7 +29,15 @@ def main() -> None:
 
 @main.command()
 @click.argument("provider", required=False)
-def add(provider: str | None) -> None:
+@click.option(
+    "--key",
+    default=None,
+    help=(
+        "API key. If omitted, checks the RATEWATCH_KEY environment variable, "
+        "then prompts interactively."
+    ),
+)
+def add(provider: str | None, key: str | None) -> None:
     """Add a provider key (configures a built-in preset or prompts for custom).
 
     Available built-in providers:
@@ -70,7 +80,10 @@ def add(provider: str | None) -> None:
         test_endpoint = click.prompt('test endpoint (path, e.g. "/models")')
         extra_headers = None
 
-    key = click.prompt(f"API key for {provider}", hide_input=True, confirmation_prompt=False)
+    if key is None:
+        key = os.environ.get("RATEWATCH_KEY")
+    if key is None:
+        key = click.prompt(f"API key for {provider}", hide_input=True)
     if not key:
         click.echo("empty key not allowed", err=True)
         sys.exit(2)
@@ -208,7 +221,22 @@ def reset() -> None:
         "the rich text table. Useful for scripting. Exit codes are unchanged."
     ),
 )
-def check_cmd(provider: str | None, live: bool, as_json: bool) -> None:
+@click.option(
+    "--timeout",
+    default=None,
+    type=click.FloatRange(min=0, min_open=True),
+    help=(
+        "Timeout in seconds for each probe request "
+        "(default: 10 for cheap probe, 15 for --live probe)."
+    ),
+)
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Suppress non-essential stderr chatter (e.g. live-mode warning).",
+)
+def check_cmd(provider: str | None, live: bool, as_json: bool, timeout: float | None, quiet: bool) -> None:
     """Check rate-limit status. Defaults to all configured providers."""
     if provider is not None:
         cfg = config.get_provider(provider)
@@ -224,7 +252,7 @@ def check_cmd(provider: str | None, live: bool, as_json: bool) -> None:
         entries = sorted(all_cfg.items(), key=lambda kv: kv[0])
         entries = [(name, cfg, cfg["key"]) for name, cfg in entries]
 
-    if live:
+    if live and not quiet:
         click.echo(
             "live mode sends a real request to each provider "
             "and may use a small amount of your quota.",
@@ -233,6 +261,8 @@ def check_cmd(provider: str | None, live: bool, as_json: bool) -> None:
         probe_fn = check.check_provider_live
     else:
         probe_fn = check.check_provider
+    if timeout is not None:
+        probe_fn = partial(probe_fn, timeout=timeout)
 
     # Each probe is a blocking HTTP call, so run them concurrently in
     # threads to parallelize the I/O. executor.map() returns results in
@@ -259,3 +289,24 @@ def check_cmd(provider: str | None, live: bool, as_json: bool) -> None:
 
     if any(r.is_limited for r in results):
         sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# export
+# ---------------------------------------------------------------------------
+
+@main.command()
+def export() -> None:
+    """Print full config as JSON with masked keys (safe for backup/scripting)."""
+    providers_cfg = config.get_providers()
+    if not providers_cfg:
+        click.echo("no providers configured.")
+        return
+
+    out = {}
+    for name, cfg in providers_cfg.items():
+        entry = dict(cfg)
+        entry["key"] = config._mask_key(cfg["key"])
+        out[name] = entry
+
+    click.echo(json.dumps(out, indent=2))

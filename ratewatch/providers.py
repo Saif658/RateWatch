@@ -90,25 +90,25 @@ PRESETS: dict[str, dict] = {
         "base_url": "https://opencode.ai/zen/v1",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
-        "chat_model": "kimi-k2",
+        "chat_model": "kimi-k2.5",
     },
     "opencode-go": {
-        "base_url": "https://opencode.ai/go/v1",
+        "base_url": "https://opencode.ai/zen/go/v1",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
-        "chat_model": "kimi-k2",
+        "chat_model": "kimi-k3",
     },
     "wafer": {
-        "base_url": "https://api.wafer.ai/v1",
+        "base_url": "https://pass.wafer.ai/v1",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
-        "chat_model": "meta-llama/llama-3.1-8b-instruct",
+        "chat_model": "GLM-5.1",
     },
     "kimi": {
         "base_url": "https://api.moonshot.ai/v1",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
-        "chat_model": "moonshot-v1-8k",
+        "chat_model": "kimi-k2.5",
     },
     "cerebras": {
         "base_url": "https://api.cerebras.ai/v1",
@@ -132,7 +132,7 @@ PRESETS: dict[str, dict] = {
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
         "auth_header_format": AUTH_BEARER,
         "test_endpoint": "/models",
-        "chat_model": "glm-4-flash",
+        "chat_model": "glm-4.7-flash",
     },
 }
 

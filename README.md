@@ -37,11 +37,17 @@ ratewatch providers
 ratewatch add openai
 ratewatch add anthropic
 
+# add a provider with a key non-interactively (flag, or RATEWATCH_KEY env var)
+ratewatch add groq --key $GROQ_KEY
+
 # probe a single provider
 ratewatch check groq
 
 # probe with a real request for accurate numbers (uses a tiny amount of quota)
 ratewatch check groq --live
+
+# probe with a custom timeout (seconds; default 10 for cheap, 15 for --live)
+ratewatch check groq --timeout 5.0
 
 # probe everything configured
 ratewatch check
@@ -64,6 +70,7 @@ Other commands:
 
 ```bash
 ratewatch list     # show providers with masked keys
+ratewatch export   # full config as JSON with masked keys (for backup/scripting)
 ratewatch remove <provider>
 ratewatch reset    # delete the entire config file
 ```

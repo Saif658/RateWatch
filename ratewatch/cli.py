@@ -38,10 +38,7 @@ def main() -> None:
     ),
 )
 def add(provider: str | None, key: str | None) -> None:
-    """Add a provider key (configures a built-in preset or prompts for custom).
-
-    Available built-in providers:
-    """
+    """Add a provider key (configures a built-in preset or prompts for custom)."""
     if provider is None:
         preset_names = providers.list_preset_names()
         if not preset_names:
@@ -306,7 +303,7 @@ def export() -> None:
     out = {}
     for name, cfg in providers_cfg.items():
         entry = dict(cfg)
-        entry["key"] = config._mask_key(cfg["key"])
+        entry["key"] = config.mask_key(cfg["key"])
         out[name] = entry
 
     click.echo(json.dumps(out, indent=2))

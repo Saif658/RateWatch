@@ -7,8 +7,16 @@ name = "ratewatch"
 version = "0.1.1"
 description = "Check rate-limit status for LLM API providers before you hit a limit."
 readme = "README.md"
+license = "Unlicense"
 requires-python = ">=3.11"
 authors = [{ name = "ratewatch" }]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: The Unlicense (Unlicense)",
+]
 dependencies = [
     "click>=8.1",
     "requests>=2.31",
@@ -19,6 +27,9 @@ dependencies = [
 
 [project.scripts]
 ratewatch = "ratewatch.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Saif658/RateWatch"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ratewatch"]

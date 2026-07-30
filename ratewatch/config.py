@@ -130,7 +130,7 @@ def remove_key(provider: str) -> bool:
 def list_keys() -> dict[str, str]:
     """Return a {provider: masked_key} mapping. Never exposes full keys."""
     providers = get_providers()
-    return {name: _mask_key(p["key"]) for name, p in providers.items()}
+    return {name: mask_key(p["key"]) for name, p in providers.items()}
 
 
 def reset() -> bool:
@@ -144,7 +144,7 @@ def reset() -> bool:
 
 # --- helpers ----------------------------------------------------------------
 
-def _mask_key(key: str) -> str:
+def mask_key(key: str) -> str:
     if not key:
         return ""
     if len(key) <= 4:

@@ -1,4 +1,4 @@
-"""Tests for ratewatch.config — add/remove/list/reset + _mask_key.
+"""Tests for ratewatch.config — add/remove/list/reset + mask_key.
 
 All tests use the `isolated_config_dir` fixture from conftest.py so they
 never read or write the real on-disk config file.
@@ -134,7 +134,7 @@ class TestListKeysAndMask:
         ],
     )
     def test_mask_key(self, key: str, expected: str) -> None:
-        assert config._mask_key(key) == expected
+        assert config.mask_key(key) == expected
 
 
 # --- reset -----------------------------------------------------------------
